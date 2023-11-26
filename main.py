@@ -50,15 +50,17 @@ def get_weather(region):
     else:
         # 获取地区的location--id
         location_id = response["location"][0]["id"]
-    weather_url = "https://devapi.qweather.com/v7/weather/now?location={}&key={}".format(location_id, key)
+    weather_url = "https://devapi.qweather.com/v7/weather/3d?location={}&key={}".format(location_id, key)
     response = get(weather_url, headers=headers).json()
     # 天气
-    weather = response["now"]["text"]
+    weather = response["daily"][0]["textDay"]
     # 当前温度
-    temp = response["now"]["temp"] + u"\N{DEGREE SIGN}" + "C"
+    tempMin = response["daily"][0]["tempMin"] + u"\N{DEGREE SIGN}" + "C"
+    tempMax = response["daily"][0]["tempMax"] + u"\N{DEGREE SIGN}" + "C"
+
     # 风向
-    wind_dir = response["now"]["windDir"]
-    return weather, temp, wind_dir
+    wind_dir = response["daily"][0]["windDirDay"]
+    return weather, tempMin, tempMax, wind_dir
  
  
 def get_birthday(birthday, year, today):
@@ -87,6 +89,7 @@ def get_birthday(birthday, year, today):
         year_date = date(year, birthday_month, birthday_day)
     # 计算生日年份，如果还没过，按当年减，如果过了需要+1
     if today > year_date:
+        # print(birthday_year[0])
         if birthday_year[0] == "r":
             # 获取农历明年生日的月和日
             r_last_birthday = ZhDate((year + 1), r_mouth, r_day).to_datetime().date()
@@ -115,7 +118,7 @@ def get_ciba():
     return note_ch, note_en
  
  
-def send_message(to_user, access_token, region_name, weather, temp, wind_dir, note_ch, note_en):
+def send_message(to_user, access_token, region_name, weather, tempMin, tempMax, wind_dir, note_ch, note_en):
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={}".format(access_token)
     week_list = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
     year = localtime().tm_year
@@ -154,7 +157,7 @@ def send_message(to_user, access_token, region_name, weather, temp, wind_dir, no
                 "color": get_color()
             },
             "temp": {
-                "value": temp,
+                "value": f"{tempMin}℃--{tempMax}℃",
                 "color": get_color()
             },
             "wind_dir": {
@@ -170,11 +173,12 @@ def send_message(to_user, access_token, region_name, weather, temp, wind_dir, no
                 "color": get_color()
             },
             "note_ch": {
-                "value": note_ch,
+                "value": "每天都很爱你💞💞💞，亲爱的小宝宝，今天也要快乐哦~",
                 "color": get_color()
             }
         }
     }
+
     for key, value in birthdays.items():
         # 获取距离下次生日的时间
         birth_day = get_birthday(value["birthday"], year, today)
@@ -184,6 +188,8 @@ def send_message(to_user, access_token, region_name, weather, temp, wind_dir, no
             birthday_data = "距离{}的生日还有{}天".format(value["name"], birth_day)
         # 将生日数据插入data
         data["data"][key] = {"value": birthday_data, "color": get_color()}
+
+    print(data)
     headers = {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -221,7 +227,7 @@ if __name__ == "__main__":
     users = config["user"]
     # 传入地区获取天气信息
     region = config["region"]
-    weather, temp, wind_dir = get_weather(region)
+    weather, tempMin, tempMax, wind_dir = get_weather(region)
     note_ch = config["note_ch"]
     note_en = config["note_en"]
     if note_ch == "" and note_en == "":
@@ -229,5 +235,5 @@ if __name__ == "__main__":
         note_ch, note_en = get_ciba()
     # 公众号推送消息
     for user in users:
-        send_message(user, accessToken, region, weather, temp, wind_dir, note_ch, note_en)
+        send_message(user, accessToken, region, weather, tempMin, tempMax, wind_dir, note_ch, note_en)
     os.system("pause")
