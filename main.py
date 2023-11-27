@@ -173,7 +173,7 @@ def send_message(to_user, access_token, region_name, weather, tempMin, tempMax, 
                 "color": get_color()
             },
             "note_ch": {
-                "value": "每天都很爱你💞💞💞，亲爱的小宝宝，今天也要快乐哦~",
+                "value": note_ch,
                 "color": get_color()
             }
         }
